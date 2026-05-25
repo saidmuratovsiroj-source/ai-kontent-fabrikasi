@@ -28,11 +28,10 @@ app.use("/api", testsRouter);
 async function start() {
   await connectDb();
   app.listen(env.port, () => {
-    console.log(`Server ishga tushdi: http://localhost:${env.port}`);
-    console.log(`Healthcheck:  http://localhost:${env.port}/api/health`);
-    console.log(`Chat:         http://localhost:${env.port}/api/chat`);
-    console.log(`Research:     http://localhost:${env.port}/api/research`);
-    console.log(`Pipeline:     http://localhost:${env.port}/api/pipeline`);
+    console.log(`✅ Server ishga tushdi: http://localhost:${env.port}`);
+    console.log(`   Pipeline:   POST /api/pipeline/stream`);
+    console.log(`   Yugurishlar: GET  /api/runs`);
+    console.log(`   Byudjet:     GET  /api/budget`);
   });
 }
 
