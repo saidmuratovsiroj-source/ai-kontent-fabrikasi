@@ -11,6 +11,9 @@ const navItems = [
   { label: "Taqvim",           href: "/takvim",     icon: "📅" },
   { label: "Bilim bazasi",     href: "/knowledge",  icon: "📚" },
   { label: "Kanallar",         href: "/channels",   icon: "📡" },
+  { label: "Analitika",        href: "/analytics",  icon: "📊" },
+  { label: "Trendlar",         href: "/trends",     icon: "🔥" },
+  { label: "Viral videolar",   href: "/viral",      icon: "🎬" },
   { label: "Kontent",          href: "/content",    icon: "📄" },
   { label: "Sozlamalar",       href: "/settings",   icon: "⚙" },
 ];

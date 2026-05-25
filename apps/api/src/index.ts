@@ -14,6 +14,9 @@ import tasksRouter from "./routes/tasks";
 import contentPlanRouter from "./routes/contentPlan";
 import channelsRouter from "./routes/channels";
 import maqsadRouter from "./routes/maqsad";
+import analyticsRouter from "./routes/analytics";
+import trendsRouter from "./routes/trends";
+import viralRouter from "./routes/viral";
 
 const app = express();
 
@@ -32,6 +35,9 @@ app.use("/api", tasksRouter);
 app.use("/api", contentPlanRouter);
 app.use("/api", channelsRouter);
 app.use("/api", maqsadRouter);
+app.use("/api", analyticsRouter);
+app.use("/api", trendsRouter);
+app.use("/api", viralRouter);
 
 async function start() {
   await connectDb();

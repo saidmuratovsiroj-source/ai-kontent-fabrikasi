@@ -67,6 +67,10 @@ router.post("/channels", async (req: Request, res: Response) => {
         lastSync:     platform === "YOUTUBE" ? new Date() : null,
       },
     });
+    // Yaratilganda snapshot saqlash
+    await prisma.channelSnapshot.create({
+      data: { channelId: kanal.id, subscribers: kanal.subscribers, views: kanal.views, videosCount: kanal.videosCount },
+    });
     res.status(201).json(kanal);
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Xato" });
@@ -94,6 +98,10 @@ router.post("/channels/:id/sync", async (req: Request, res: Response) => {
         videosCount: info.videosCount,
         lastSync:    new Date(),
       },
+    });
+    // Sync qilganda snapshot saqlash
+    await prisma.channelSnapshot.create({
+      data: { channelId: id, subscribers: yangilangan.subscribers, views: yangilangan.views, videosCount: yangilangan.videosCount },
     });
     res.json(yangilangan);
   } catch (err) {

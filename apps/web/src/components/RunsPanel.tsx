@@ -102,8 +102,8 @@ function BudgetBar({ spent, limit }: { spent: number; limit: number }) {
   );
 }
 
-export default function RunsPanel() {
-  const [input,          setInput]          = useState("");
+export default function RunsPanel({ initialTopic }: { initialTopic?: string }) {
+  const [input,          setInput]          = useState(initialTopic ?? "");
   const [budgetEnabled,  setBudgetEnabled]  = useState(false);
   const [budgetLimit,    setBudgetLimit]    = useState(1.00);
   const [running,        setRunning]        = useState(false);

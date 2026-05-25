@@ -170,8 +170,22 @@ model Channel {
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   maqsad      Maqsad[]
+  snapshots   ChannelSnapshot[]
 
   @@map("channels")
+}
+
+model ChannelSnapshot {
+  id          String   @id @default(uuid())
+  channelId   String   @map("channel_id")
+  subscribers Int
+  views       Float
+  videosCount Int      @map("videos_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  channel     Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@map("channel_snapshots")
 }
 
 model Maqsad {

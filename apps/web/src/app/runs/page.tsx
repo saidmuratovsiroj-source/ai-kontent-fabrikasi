@@ -1,6 +1,6 @@
 import RunsPanel from "@/components/RunsPanel";
 
-export default function RunsPage() {
+export default function RunsPage({ searchParams }: { searchParams: { topic?: string } }) {
   return (
     <div className="max-w-4xl mx-auto w-full">
       <div className="mb-6">
@@ -9,7 +9,7 @@ export default function RunsPage() {
           Mavzu bering — Strateg, Tadqiqotchi va Tanqidchi birgalikda ishlaydi
         </p>
       </div>
-      <RunsPanel />
+      <RunsPanel initialTopic={searchParams.topic} />
     </div>
   );
 }
