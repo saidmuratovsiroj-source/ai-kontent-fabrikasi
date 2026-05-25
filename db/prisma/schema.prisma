@@ -58,6 +58,12 @@ enum ContentPlanStatus {
   BEKOR_QILINDI
 }
 
+enum KnowledgeType {
+  HUJJAT
+  RASM
+  STIL_REFERENS
+}
+
 enum MessageRole {
   USER
   ASSISTANT
@@ -133,13 +139,16 @@ model ChatMessage {
 }
 
 model KnowledgeItem {
-  id        String   @id @default(uuid())
+  id        String        @id @default(uuid())
+  type      KnowledgeType @default(HUJJAT)
   title     String
   source    String
-  content   String   @db.Text
-  chunks    Int      @default(0)
-  sizeKb    Float    @map("size_kb")
-  createdAt DateTime @default(now()) @map("created_at")
+  content   String        @db.Text
+  summary   String?       @db.Text
+  visibleTo String[]      @default([]) @map("visible_to")
+  chunks    Int           @default(0)
+  sizeKb    Float         @map("size_kb")
+  createdAt DateTime      @default(now()) @map("created_at")
 
   @@map("knowledge_items")
 }

@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { createOpenRouterClient } from "../lib/openrouter";
 import { prisma } from "../lib/prisma";
+import { bilimBazasidanTopilsin } from "../lib/knowledgeSearch";
 
 const SCENARIST_ID = "00000000-0000-0000-0000-000000000004";
 
@@ -18,12 +19,17 @@ export async function runScenarioAgent(
   if (!agent) throw new Error("Сценарист агенти bazada topilmadi. Seed ni qayta ishga tushiring.");
 
   const openai = createOpenRouterClient();
+  const bilim  = await bilimBazasidanTopilsin(topic, "ssenarist");
 
   const UZBEK_INSTRUCTION =
     `MAJBURIY QOIDA: Barcha matnni faqat O'zbek tilida (lotin alifbosida) yoz. ` +
     `Mavzu qaysi tilda berilishidan qat'i nazar — ssenariyning sarlavhasi, kirish qismi, ` +
     `asosiy mazmuni, xulosa va barcha bo'lim nomlari faqat o'zbekcha bo'lsin. ` +
     `Hech qanday rus yoki ingliz tilidagi so'z ishlatma.\n\n`;
+
+  const bilimBlok = bilim
+    ? `--- BILIM BAZASI ---\n${bilim}\n--- BILIM BAZASI TUGADI ---\n\n`
+    : "";
 
   const response = await openai.chat.completions.create({
     model:      agent.model,
@@ -34,6 +40,7 @@ export async function runScenarioAgent(
         role: "user",
         content:
           `Video mavzusi: "${topic}"\n\n` +
+          bilimBlok +
           `--- TADQIQOT HISOBOTI ---\n${researchReport}\n--- HISOBOT TUGADI ---\n\n` +
           `Ushbu ma'lumotlar asosida YouTube-video uchun to'liq professional ssenariy yoz. ` +
           `Barcha matn faqat o'zbek tilida (lotin alifbosida) bo'lsin. ` +

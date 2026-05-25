@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { createOpenRouterClient } from "../lib/openrouter";
 import { prisma } from "../lib/prisma";
+import { bilimBazasidanTopilsin } from "../lib/knowledgeSearch";
 
 const DESIGNER_ID = "00000000-0000-0000-0000-000000000005";
 
@@ -18,6 +19,7 @@ export async function runDesignerAgent(
   if (!agent) throw new Error("Дизайнер агенти bazada topilmadi. Seed ni qayta ishga tushiring.");
 
   const openai = createOpenRouterClient();
+  const bilim  = await bilimBazasidanTopilsin(topic, "dizayner");
 
   const UZBEK_INSTRUCTION =
     `MAJBURIY QOIDA: Barcha matnni faqat O'zbek tilida (lotin alifbosida) yoz. ` +
@@ -26,6 +28,9 @@ export async function runDesignerAgent(
     `Hech qanday rus yoki ingliz tilidagi so'z ishlatma.\n\n`;
 
   const scriptPreview = script.length > 3000 ? script.slice(0, 3000) + "\n\n[... ssenariy davomi ...]" : script;
+  const bilimBlok     = bilim
+    ? `--- STIL REFERENSLARI VA BILIM BAZASI ---\n${bilim}\n--- TUGADI ---\n\n`
+    : "";
 
   const response = await openai.chat.completions.create({
     model:      agent.model,
@@ -36,6 +41,7 @@ export async function runDesignerAgent(
         role: "user",
         content:
           `Video mavzusi: "${topic}"\n\n` +
+          bilimBlok +
           `--- SSENARIY FRAGMENTI ---\n${scriptPreview}\n--- TUGADI ---\n\n` +
           `Mavzu va ssenariy asosida 3 ta thumbnail konsepsiyasi va 5 ta sarlavha varianti tayyorla. ` +
           `Barcha matn faqat o'zbek tilida (lotin alifbosida) bo'lsin. ` +
