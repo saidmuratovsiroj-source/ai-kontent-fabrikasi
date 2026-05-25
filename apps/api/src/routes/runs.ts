@@ -7,7 +7,7 @@ const router = Router();
 router.get("/runs", async (_req: Request, res: Response) => {
   try {
     const rows = await prisma.run.findMany({
-      select: { id: true, title: true, status: true, input: true, output: true, createdAt: true },
+      select: { id: true, title: true, status: true, input: true, output: true, createdAt: true, budgetLimit: true, budgetSpent: true },
       orderBy: { createdAt: "desc" },
       take: 100,
     });
@@ -19,18 +19,20 @@ router.get("/runs", async (_req: Request, res: Response) => {
         catch { /* JSON buzilgan bo'lsa o'tkazib yuboramiz */ }
       }
       return {
-        id:        run.id,
-        title:     run.title,
-        status:    run.status,
-        input:     run.input,
-        createdAt: run.createdAt,
-        approved:  (parsed?.approved as boolean)  ?? false,
-        costUsd:   (parsed?.costUsd  as number)   ?? 0,
-        plan:      (parsed?.plan     as string)   ?? "",
-        topic:     (parsed?.topic    as string)   ?? "",
-        script:    (parsed?.script   as string)   ?? "",
-        thumbnail: (parsed?.thumbnail as string)  ?? "",
-        report:    (parsed?.report   as string)   ?? "",
+        id:          run.id,
+        title:       run.title,
+        status:      run.status,
+        input:       run.input,
+        createdAt:   run.createdAt,
+        budgetLimit: run.budgetLimit,
+        budgetSpent: run.budgetSpent,
+        approved:    (parsed?.approved  as boolean) ?? false,
+        costUsd:     (parsed?.costUsd   as number)  ?? run.budgetSpent ?? 0,
+        plan:        (parsed?.plan      as string)  ?? "",
+        topic:       (parsed?.topic     as string)  ?? "",
+        script:      (parsed?.script    as string)  ?? "",
+        thumbnail:   (parsed?.thumbnail as string)  ?? "",
+        report:      (parsed?.report    as string)  ?? "",
       };
     });
 

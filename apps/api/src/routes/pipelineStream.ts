@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { env } from "../config/env";
 import { createOpenRouterClient } from "../lib/openrouter";
+import { createApproval, resolveApproval } from "../lib/approvalQueue";
 import { prisma } from "../lib/prisma";
 import { runResearchAgent } from "../agents/researchAgent";
 import { runCriticAgent } from "../agents/criticAgent";
@@ -17,12 +18,29 @@ const MAX_RETRIES = 2;
 
 const BodySchema = z.object({
   userRequest: z.string().min(3).max(500),
+  budgetLimit: z.number().min(0.10).max(5.00).optional(),
 });
 
 function send(res: Response, event: string, data: object) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
+// ── POST /api/pipeline/approve — foydalanuvchi tasdiqlash javobi ──────────────
+router.post("/pipeline/approve", (req: Request, res: Response) => {
+  const { approvalId, action } = req.body as { approvalId?: string; action?: string };
+  if (!approvalId || !action) {
+    res.status(400).json({ error: "approvalId va action kerak" });
+    return;
+  }
+  if (!["approve", "edit", "cancel"].includes(action)) {
+    res.status(400).json({ error: "action: approve | edit | cancel" });
+    return;
+  }
+  const ok = resolveApproval(approvalId, action as "approve" | "edit" | "cancel");
+  res.json({ ok });
+});
+
+// ── POST /api/pipeline/stream ─────────────────────────────────────────────────
 router.post("/pipeline/stream", async (req: Request, res: Response) => {
   if (!env.openrouterApiKey) {
     res.status(503).json({ error: "OPENROUTER_API_KEY sozlanmagan" });
@@ -40,23 +58,43 @@ router.post("/pipeline/stream", async (req: Request, res: Response) => {
   res.setHeader("Connection",    "keep-alive");
   res.flushHeaders();
 
-  const { userRequest } = parsed.data;
+  const { userRequest, budgetLimit } = parsed.data;
+  let activeBudget: number | undefined = budgetLimit;
+
+  // Byudjet chegasiga yetildi → foydalanuvchidan ruxsat so'raydi
+  async function budgetTekshir(cost: number): Promise<boolean> {
+    if (activeBudget === undefined || cost < activeBudget) return true; // davom
+    const { approvalId, promise } = createApproval();
+    send(res, "budget_warning", {
+      approvalId,
+      message: `Byudjet chegasiga yetdi: $${cost.toFixed(4)} / $${activeBudget.toFixed(2)}`,
+      spent:   cost,
+      limit:   activeBudget,
+    });
+    const action = await promise;
+    if (action === "cancel") return false; // toxtat
+    activeBudget = undefined; // foydalanuvchi rozilik berdi — chekni o'chiramiz
+    return true;
+  }
+
+  let topic      = userRequest;
+  let plan       = "";
+  let finalReport = "";
+  let script     = "";
+  let thumbnail  = "";
+  let approved   = false;
+  let totalCostUsd = 0;
 
   try {
     send(res, "start", { message: "Pipeline boshlandi", userRequest });
 
-    // ── 1. СТРАТЕГ — reja va tadqiqot mavzusi ──────────────────────────────
+    // ── 1. STRATEG ────────────────────────────────────────────────────────
     send(res, "step", { agent: "Стратег", status: "running", message: "Mavzuni tahlil qilmoqda..." });
 
     const strateg = await prisma.agent.findUnique({ where: { id: STRATEG_ID } });
-    if (!strateg) throw new Error("Стратег bazada topilmadi");
+    if (!strateg) throw new Error("Strateg bazada topilmadi");
 
-    const openai = createOpenRouterClient();
-
-    let totalInputTokens  = 0;
-    let totalOutputTokens = 0;
-    let totalCostUsd      = 0;
-
+    const openai        = createOpenRouterClient();
     const STRATEG_MODEL = "anthropic/claude-3.5-sonnet";
 
     const strategRes = await openai.chat.completions.create({
@@ -65,12 +103,10 @@ router.post("/pipeline/stream", async (req: Request, res: Response) => {
       messages: [
         { role: "system", content: strateg.systemPrompt },
         {
-          role: "user",
-          content:
-            `Пользователь хочет YouTube-видео: "${userRequest}"\n\n` +
-            `1. Краткий план (2-3 предложения).\n` +
-            `2. Одна чёткая тема для исследования.\n\n` +
-            `JSON без markdown: {"plan": "...", "topic": "..."}`,
+          role:    "user",
+          content: `Foydalanuvchi YouTube-video yaratmoqchi: "${userRequest}"\n\n` +
+                   `1. Qisqa reja (2-3 jumla).\n2. Tadqiqot uchun bitta aniq mavzu.\n\n` +
+                   `JSON (markdown'siz): {"plan": "...", "topic": "..."}`,
         },
       ],
     });
@@ -78,188 +114,160 @@ router.post("/pipeline/stream", async (req: Request, res: Response) => {
     const strategText  = strategRes.choices[0].message.content ?? "{}";
     const strategClean = strategText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
 
-    let strategData: { plan: string; topic: string };
     try {
       const p = JSON.parse(strategClean) as { plan?: string; topic?: string };
-      strategData = { plan: p.plan ?? "...", topic: p.topic ?? userRequest };
+      plan  = p.plan  ?? strategClean.slice(0, 200);
+      topic = p.topic ?? userRequest;
     } catch {
-      strategData = { plan: strategClean.slice(0, 200), topic: userRequest };
+      plan  = strategClean.slice(0, 200);
+      topic = userRequest;
     }
 
-    const sIn  = strategRes.usage?.prompt_tokens    ?? 0;
-    const sOut = strategRes.usage?.completion_tokens ?? 0;
-    totalInputTokens  += sIn;
-    totalOutputTokens += sOut;
+    const sIn = strategRes.usage?.prompt_tokens ?? 0, sOut = strategRes.usage?.completion_tokens ?? 0;
     void trackUsage("strateg-plan", STRATEG_MODEL, sIn, sOut);
     totalCostUsd += calcCost(STRATEG_MODEL, sIn, sOut);
 
-    send(res, "step", { agent: "Стратег", status: "done", message: strategData.plan, topic: strategData.topic });
+    send(res, "step", { agent: "Стратег", status: "done", message: plan, topic });
 
-    // ── 2-3. RESEARCH → CRITIC sikli ───────────────────────────────────────
-    let finalReport = "";
-    let approved    = false;
-    let searchTopic = strategData.topic;
+    if (!await budgetTekshir(totalCostUsd)) {
+      send(res, "cancelled", { message: "Byudjet — foydalanuvchi to'xtatdi" }); res.end(); return;
+    }
+
+    // ── 2-3. TADQIQOTCHI → TANQIDCHI sikli ───────────────────────────────
+    let searchTopic = topic;
 
     for (let round = 1; round <= MAX_RETRIES + 1; round++) {
       send(res, "step", {
-        agent:   "Исследователь",
-        status:  "running",
-        round,
-        message: `Internetdan ma'lumot qidirmoqda... (Round ${round}/${MAX_RETRIES + 1})`,
+        agent: "Исследователь", status: "running", round,
+        message: `Internet qidirmoqda... (${round}/${MAX_RETRIES + 1})`,
       });
 
       const researchResult = await runResearchAgent(searchTopic);
-      totalInputTokens  += researchResult.usage.inputTokens;
-      totalOutputTokens += researchResult.usage.outputTokens;
       void trackUsage("research", "openai/gpt-4o-mini", researchResult.usage.inputTokens, researchResult.usage.outputTokens);
       totalCostUsd += calcCost("openai/gpt-4o-mini", researchResult.usage.inputTokens, researchResult.usage.outputTokens);
 
       send(res, "step", {
-        agent:   "Исследователь",
-        status:  "done",
-        round,
+        agent:   "Исследователь", status: "done", round,
         message: `${researchResult.queries.length} ta qidiruv bajarildi`,
         queries: researchResult.queries,
         preview: researchResult.report.slice(0, 400) + "...",
       });
 
+      if (!await budgetTekshir(totalCostUsd)) {
+        send(res, "cancelled", { message: "Byudjet — foydalanuvchi to'xtatdi" }); res.end(); return;
+      }
+
       send(res, "step", { agent: "Критик", status: "running", round, message: "Hisobotni tekshirmoqda..." });
 
-      const criticResult = await runCriticAgent(strategData.topic, researchResult.report);
-      totalInputTokens  += criticResult.usage.inputTokens;
-      totalOutputTokens += criticResult.usage.outputTokens;
+      const criticResult = await runCriticAgent(topic, researchResult.report);
       void trackUsage("critic", "openai/gpt-4o-mini", criticResult.usage.inputTokens, criticResult.usage.outputTokens);
       totalCostUsd += calcCost("openai/gpt-4o-mini", criticResult.usage.inputTokens, criticResult.usage.outputTokens);
 
       send(res, "step", {
         agent:    "Критик",
         status:   criticResult.approved ? "approved" : "rejected",
-        round,
-        score:    criticResult.score,
+        round,    score:    criticResult.score,
         approved: criticResult.approved,
         verdict:  criticResult.verdict,
         issues:   criticResult.issues,
       });
 
-      if (criticResult.approved) {
-        finalReport = researchResult.report;
-        approved    = true;
-        break;
-      }
-
-      if (round === MAX_RETRIES + 1) {
-        finalReport = researchResult.report;
-        break;
-      }
-
+      if (criticResult.approved) { finalReport = researchResult.report; approved = true; break; }
+      if (round === MAX_RETRIES + 1) { finalReport = researchResult.report; break; }
       if (criticResult.improvement_queries.length > 0) {
-        searchTopic = `${strategData.topic}. Дополнительно: ${criticResult.improvement_queries.slice(0, 2).join("; ")}`;
+        searchTopic = `${topic}. Qo'shimcha: ${criticResult.improvement_queries.slice(0, 2).join("; ")}`;
       }
     }
 
-    // ── 4. СЦЕНАРИСТ — video ssenariy ──────────────────────────────────────
-    send(res, "step", {
-      agent:   "Сценарист",
-      status:  "running",
-      message: "Tadqiqot asosida video ssenariysini yozmoqda...",
-    });
+    if (!await budgetTekshir(totalCostUsd)) {
+      send(res, "cancelled", { message: "Byudjet — foydalanuvchi to'xtatdi" }); res.end(); return;
+    }
 
-    let script = "";
+    // ── 4. SSENARIST ─────────────────────────────────────────────────────
+    send(res, "step", { agent: "Сценарист", status: "running", message: "Video ssenariy yozmoqda..." });
     try {
-      const scenarioResult = await runScenarioAgent(strategData.topic, finalReport);
-      script = scenarioResult.script ?? "";
-      totalInputTokens  += scenarioResult.usage.inputTokens;
-      totalOutputTokens += scenarioResult.usage.outputTokens;
-      void trackUsage("scenario", "anthropic/claude-3.5-sonnet", scenarioResult.usage.inputTokens, scenarioResult.usage.outputTokens);
-      totalCostUsd += calcCost("anthropic/claude-3.5-sonnet", scenarioResult.usage.inputTokens, scenarioResult.usage.outputTokens);
-
+      const r = await runScenarioAgent(topic, finalReport);
+      script = r.script ?? "";
+      void trackUsage("scenario", "anthropic/claude-3.5-sonnet", r.usage.inputTokens, r.usage.outputTokens);
+      totalCostUsd += calcCost("anthropic/claude-3.5-sonnet", r.usage.inputTokens, r.usage.outputTokens);
       send(res, "step", {
-        agent:   "Сценарист",
-        status:  "done",
+        agent: "Сценарист", status: "done",
         message: `Ssenariy tayyor — ${script.length} belgi`,
         preview: script.slice(0, 500) + (script.length > 500 ? "..." : ""),
       });
-    } catch (scenarioErr) {
-      const msg = scenarioErr instanceof Error ? scenarioErr.message : "Noma'lum xato";
-      console.error("[Сценарист] xato:", msg);
-      send(res, "step", {
-        agent:   "Сценарист",
-        status:  "error",
-        message: `Ssenariy xatosi: ${msg} — pipeline davom etmoqda`,
-      });
+    } catch (e) {
+      send(res, "step", { agent: "Сценарист", status: "error", message: `Xato: ${e instanceof Error ? e.message : e}` });
     }
 
-    // ── 5. ДИЗАЙНЕР — thumbnail konsepsiyalari ─────────────────────────────
-    send(res, "step", {
-      agent:   "Дизайнер",
-      status:  "running",
-      message: "Ssenariy asosida thumbnail konsepsiyalarini yaratmoqda...",
-    });
+    if (!await budgetTekshir(totalCostUsd)) {
+      send(res, "cancelled", { message: "Byudjet — foydalanuvchi to'xtatdi" }); res.end(); return;
+    }
 
-    let thumbnail = "";
+    // ── 5. DIZAYNER ───────────────────────────────────────────────────────
+    send(res, "step", { agent: "Дизайнер", status: "running", message: "Thumbnail konsepsiyalarini yaratmoqda..." });
     try {
-      const designerResult = await runDesignerAgent(strategData.topic, script);
-      thumbnail = designerResult.concepts ?? "";
-      totalInputTokens  += designerResult.usage.inputTokens;
-      totalOutputTokens += designerResult.usage.outputTokens;
-      void trackUsage("designer", "openai/gpt-4o-mini", designerResult.usage.inputTokens, designerResult.usage.outputTokens);
-      totalCostUsd += calcCost("openai/gpt-4o-mini", designerResult.usage.inputTokens, designerResult.usage.outputTokens);
-
+      const r = await runDesignerAgent(topic, script);
+      thumbnail = r.concepts ?? "";
+      void trackUsage("designer", "openai/gpt-4o-mini", r.usage.inputTokens, r.usage.outputTokens);
+      totalCostUsd += calcCost("openai/gpt-4o-mini", r.usage.inputTokens, r.usage.outputTokens);
       send(res, "step", {
-        agent:   "Дизайнер",
-        status:  "done",
+        agent: "Дизайнер", status: "done",
         message: "3 ta thumbnail konsepsiyasi va 5 ta sarlavha tayyorlandi",
         preview: thumbnail.slice(0, 400) + (thumbnail.length > 400 ? "..." : ""),
       });
-    } catch (designerErr) {
-      const msg = designerErr instanceof Error ? designerErr.message : "Noma'lum xato";
-      console.error("[Дизайнер] xato:", msg);
-      send(res, "step", {
-        agent:   "Дизайнер",
-        status:  "error",
-        message: `Dizayner xatosi: ${msg} — pipeline davom etmoqda`,
-      });
+    } catch (e) {
+      send(res, "step", { agent: "Дизайнер", status: "error", message: `Xato: ${e instanceof Error ? e.message : e}` });
     }
 
-    // ── DB GA SAQLASH (runs jadvali) ───────────────────────────────────────
+    // ── 6. INSON TASDIQLASH — Telegram'ga yuborishdan oldin ───────────────
+    if (script || thumbnail) {
+      const { approvalId, promise } = createApproval();
+      send(res, "approval_needed", {
+        approvalId,
+        stage:   "yakuniy_tasdiqlash",
+        message: "Kontent tayyor. Telegram'ga yuborib, saqlab qo'ysizmi?",
+        preview: script.slice(0, 600),
+        costUsd: Math.round(totalCostUsd * 10000) / 10000,
+      });
+
+      const approvalAction = await promise;
+
+      if (approvalAction === "cancel") {
+        send(res, "cancelled", { message: "Foydalanuvchi bekor qildi — kontent saqlanmadi" });
+        res.end();
+        return;
+      }
+      // "approve" yoki "edit" — saqlash va Telegram'ga yuborish davom etadi
+    }
+
+    // ── DB GA SAQLASH ─────────────────────────────────────────────────────
     const costUsd = Math.round(totalCostUsd * 10000) / 10000;
     try {
       await prisma.run.create({
         data: {
-          title:  strategData.topic.slice(0, 200),
-          status: script || thumbnail ? "COMPLETED" : "FAILED",
-          input:  userRequest,
-          output: JSON.stringify({
-            plan:      strategData.plan,
-            topic:     strategData.topic,
-            report:    finalReport,
-            script,
-            thumbnail,
-            costUsd,
-            approved,
-          }),
+          title:       topic.slice(0, 200),
+          status:      script || thumbnail ? "COMPLETED" : "FAILED",
+          input:       userRequest,
+          budgetLimit: budgetLimit ?? null,
+          budgetSpent: costUsd,
+          output: JSON.stringify({ plan, topic, report: finalReport, script, thumbnail, costUsd, approved }),
         },
       });
     } catch (dbErr) {
       console.error("[DB] Run saqlanmadi:", dbErr instanceof Error ? dbErr.message : dbErr);
     }
 
-    // ── TELEGRAM (DB dan keyin, mustaqil) ─────────────────────────────────
+    // ── TELEGRAM ──────────────────────────────────────────────────────────
     try {
-      await sendTelegramPost({ topic: strategData.topic, plan: strategData.plan, script, thumbnail });
+      await sendTelegramPost({ topic, plan, script, thumbnail });
     } catch (tgErr) {
       console.error("[Telegram] xato:", tgErr instanceof Error ? tgErr.message : tgErr);
     }
 
-    // ── YAKUNIY NATIJA ─────────────────────────────────────────────────────
+    // ── YAKUNIY NATIJA ────────────────────────────────────────────────────
     send(res, "done", {
-      approved,
-      plan:        strategData.plan,
-      topic:       strategData.topic,
-      finalReport,
-      script,
-      thumbnail,
-      costUsd,
+      approved, plan, topic, finalReport, script, thumbnail, costUsd,
+      budgetLimit: budgetLimit ?? null,
     });
 
   } catch (err) {

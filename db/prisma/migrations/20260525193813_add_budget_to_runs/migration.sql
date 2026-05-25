@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "runs" ADD COLUMN     "budget_limit" DOUBLE PRECISION,
+ADD COLUMN     "budget_spent" DOUBLE PRECISION NOT NULL DEFAULT 0;

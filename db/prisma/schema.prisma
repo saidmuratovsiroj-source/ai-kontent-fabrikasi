@@ -56,16 +56,18 @@ model Agent {
 }
 
 model Run {
-  id        String    @id @default(uuid())
-  title     String
-  status    RunStatus @default(PENDING)
-  input     String    @db.Text
-  output    String?   @db.Text
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  id           String    @id @default(uuid())
+  title        String
+  status       RunStatus @default(PENDING)
+  input        String    @db.Text
+  output       String?   @db.Text
+  budgetLimit  Float?    @map("budget_limit")
+  budgetSpent  Float     @default(0) @map("budget_spent")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  tasks     Task[]
-  messages  ChatMessage[]
+  tasks        Task[]
+  messages     ChatMessage[]
 
   @@map("runs")
 }
