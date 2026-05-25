@@ -1,0 +1,126 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum AgentRole {
+  PLANNER
+  WRITER
+  EDITOR
+  RESEARCHER
+  CRITIC
+}
+
+enum RunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model Agent {
+  id           String    @id @default(uuid())
+  name         String
+  role         AgentRole
+  systemPrompt String    @map("system_prompt") @db.Text
+  model        String    @default("claude-sonnet-4-6")
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  tasks        Task[]
+  messages     ChatMessage[]
+
+  @@map("agents")
+}
+
+model Run {
+  id        String    @id @default(uuid())
+  title     String
+  status    RunStatus @default(PENDING)
+  input     String    @db.Text
+  output    String?   @db.Text
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  tasks     Task[]
+  messages  ChatMessage[]
+
+  @@map("runs")
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  runId       String     @map("run_id")
+  agentId     String     @map("agent_id")
+  title       String
+  description String     @db.Text
+  status      TaskStatus @default(PENDING)
+  result      String?    @db.Text
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  run         Run        @relation(fields: [runId], references: [id], onDelete: Cascade)
+  agent       Agent      @relation(fields: [agentId], references: [id])
+
+  @@map("tasks")
+}
+
+model ChatMessage {
+  id        String      @id @default(uuid())
+  runId     String      @map("run_id")
+  agentId   String?     @map("agent_id")
+  role      MessageRole
+  content   String      @db.Text
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  run       Run         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  agent     Agent?      @relation(fields: [agentId], references: [id])
+
+  @@map("chat_messages")
+}
+
+model KnowledgeItem {
+  id        String   @id @default(uuid())
+  title     String
+  source    String
+  content   String   @db.Text
+  chunks    Int      @default(0)
+  sizeKb    Float    @map("size_kb")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("knowledge_items")
+}
+
+model UsageLog {
+  id           String   @id @default(uuid())
+  operation    String
+  model        String
+  inputTokens  Int      @map("input_tokens")
+  outputTokens Int      @map("output_tokens")
+  costCents    Float    @map("cost_cents")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("usage_logs")
+}

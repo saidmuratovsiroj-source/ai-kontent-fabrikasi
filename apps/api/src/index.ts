@@ -1,0 +1,40 @@
+import express from "express";
+import cors from "cors";
+import { env } from "./config/env";
+import { connectDb } from "./db/db";
+import healthRouter from "./routes/health";
+import chatRouter from "./routes/chat";
+import researchRouter from "./routes/research";
+import pipelineStreamRouter from "./routes/pipelineStream";
+import budgetRouter from "./routes/budget";
+import knowledgeRouter from "./routes/knowledge";
+import runsRouter from "./routes/runs";
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+app.use("/api", healthRouter);
+app.use("/api", chatRouter);
+app.use("/api", researchRouter);
+app.use("/api", pipelineStreamRouter);
+app.use("/api", budgetRouter);
+app.use("/api", knowledgeRouter);
+app.use("/api", runsRouter);
+
+async function start() {
+  await connectDb();
+  app.listen(env.port, () => {
+    console.log(`Server ishga tushdi: http://localhost:${env.port}`);
+    console.log(`Healthcheck:  http://localhost:${env.port}/api/health`);
+    console.log(`Chat:         http://localhost:${env.port}/api/chat`);
+    console.log(`Research:     http://localhost:${env.port}/api/research`);
+    console.log(`Pipeline:     http://localhost:${env.port}/api/pipeline`);
+  });
+}
+
+start().catch((err) => {
+  console.error("Server ishga tushmadi:", err);
+  process.exit(1);
+});
