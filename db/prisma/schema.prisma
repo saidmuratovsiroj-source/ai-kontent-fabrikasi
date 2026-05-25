@@ -31,6 +31,28 @@ enum TaskStatus {
   FAILED
 }
 
+enum KanbanStatus {
+  NAVBATDA
+  ISHDA
+  JAVOB_KUTILMOQDA
+  TEKSHIRUVDA
+  TASDIQLANGAN
+  BEKOR_QILINDI
+}
+
+enum Platform {
+  YOUTUBE
+  TELEGRAM
+  INSTAGRAM
+}
+
+enum ContentPlanStatus {
+  REJALASHTIRILGAN
+  TAYYORLANOQDA
+  NASHR_QILINDI
+  BEKOR_QILINDI
+}
+
 enum MessageRole {
   USER
   ASSISTANT
@@ -68,6 +90,7 @@ model Run {
 
   tasks        Task[]
   messages     ChatMessage[]
+  contentPlans ContentPlan[]
 
   @@map("runs")
 }
@@ -78,13 +101,14 @@ model Task {
   agentId     String     @map("agent_id")
   title       String
   description String     @db.Text
-  status      TaskStatus @default(PENDING)
-  result      String?    @db.Text
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
+  status        TaskStatus   @default(PENDING)
+  kanbanStatus  KanbanStatus @default(NAVBATDA) @map("kanban_status")
+  result        String?      @db.Text
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
 
-  run         Run        @relation(fields: [runId], references: [id], onDelete: Cascade)
-  agent       Agent      @relation(fields: [agentId], references: [id])
+  run           Run          @relation(fields: [runId], references: [id], onDelete: Cascade)
+  agent         Agent        @relation(fields: [agentId], references: [id])
 
   @@map("tasks")
 }
@@ -125,4 +149,19 @@ model UsageLog {
   createdAt    DateTime @default(now()) @map("created_at")
 
   @@map("usage_logs")
+}
+
+model ContentPlan {
+  id          String            @id @default(uuid())
+  title       String
+  platform    Platform
+  plannedDate DateTime          @map("planned_date")
+  status      ContentPlanStatus @default(REJALASHTIRILGAN)
+  runId       String?           @map("run_id")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  run         Run?              @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@map("content_plans")
 }
