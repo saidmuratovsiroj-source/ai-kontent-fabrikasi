@@ -1,8 +1,10 @@
+<!-- QOIDA #1: Barcha kod, interfeys, DB — 100% O'zbek tili (lotin alifbosi). Hech qachon rus tili ishlatilmasin. -->
+
 # AI Kontent Fabrikasi — Loyiha Xotirasi
 
 ## Loyiha haqida
 Bu loyiha Full-stack AI Swarm (Kontent Fabrikasi) — sun'iy intellekt yordamida kontent ishlab chiqarish tizimi.
-To'liq reja: `VAZIFA.md` faylida. Interfeys: **O'zbek tilida**, agentlar javobi: **Rus tilida**.
+To'liq reja: `VAZIFA.md` faylida. Interfeys: **O'zbek tilida**, agentlar javobi: **O'zbek tilida**.
 
 ## Maqsad (Oxirigacha bitirish rejasi)
 Foydalanuvchi YouTube mavzusini beradi → tizim avtomatik ravishda:

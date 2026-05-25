@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 const navItems = [
   { label: "Boshqaruv paneli", href: "/",           icon: "⊞" },
   { label: "Agentlar",         href: "/agents",     icon: "🤖" },
-  { label: "Прогоны Роя",      href: "/runs",       icon: "🚀" },
-  { label: "База знаний",      href: "/knowledge",  icon: "📚" },
+  { label: "Roy yugurishlari",  href: "/runs",       icon: "🚀" },
+  { label: "Bilim bazasi",      href: "/knowledge",  icon: "📚" },
   { label: "Kontent",          href: "/content",    icon: "📄" },
   { label: "Sozlamalar",       href: "/settings",   icon: "⚙" },
 ];

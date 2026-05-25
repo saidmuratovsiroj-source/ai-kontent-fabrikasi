@@ -185,7 +185,7 @@ export default function ContentPage() {
       {runs.length > 0 && (
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: "Jami прогонлар", value: String(runs.length) },
+            { label: "Jami yugurishlar", value: String(runs.length) },
             { label: "Muvaffaqiyatli",  value: String(completed) },
             { label: "Jami xarajat",    value: `$${totalCost.toFixed(4)}` },
           ].map((s) => (
@@ -227,7 +227,7 @@ export default function ContentPage() {
           </p>
           {!search && (
             <p className="text-xs mt-1">
-              Прогоны Роя sahifasida birinchi pipeline'ni ishga tushiring
+              Roy yugurishlari sahifasida birinchi pipeline'ni ishga tushiring
             </p>
           )}
         </div>
