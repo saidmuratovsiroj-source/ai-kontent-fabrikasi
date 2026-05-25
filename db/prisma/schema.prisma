@@ -46,6 +46,11 @@ enum Platform {
   INSTAGRAM
 }
 
+enum Who {
+  MEN
+  RAQIB
+}
+
 enum ContentPlanStatus {
   REJALASHTIRILGAN
   TAYYORLANOQDA
@@ -149,6 +154,37 @@ model UsageLog {
   createdAt    DateTime @default(now()) @map("created_at")
 
   @@map("usage_logs")
+}
+
+model Channel {
+  id          String    @id @default(uuid())
+  platform    Platform
+  channelUrl  String    @map("channel_url")
+  channelName String    @map("channel_name")
+  who         Who
+  subscribers Int       @default(0)
+  views       Float     @default(0)
+  videosCount Int       @default(0) @map("videos_count")
+  lastSync    DateTime? @map("last_sync")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  maqsad      Maqsad[]
+
+  @@map("channels")
+}
+
+model Maqsad {
+  id                String   @id @default(uuid())
+  targetSubscribers Int      @map("target_subscribers")
+  targetDate        DateTime @map("target_date")
+  mainChannelId     String?  @map("main_channel_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  mainChannel       Channel? @relation(fields: [mainChannelId], references: [id], onDelete: SetNull)
+
+  @@map("maqsad")
 }
 
 model ContentPlan {

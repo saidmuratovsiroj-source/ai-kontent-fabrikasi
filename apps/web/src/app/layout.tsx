@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
+import MaqsadHeader from "@/components/MaqsadHeader";
 
 export const metadata: Metadata = {
   title: "AI Kontent Fabrikasi",
@@ -10,9 +11,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="uz">
-      <body className="flex h-screen overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 p-8 overflow-auto">{children}</main>
+      <body className="flex flex-col h-screen overflow-hidden">
+        <MaqsadHeader />
+        <div className="flex flex-1 overflow-hidden">
+          <Sidebar />
+          <main className="flex-1 p-8 overflow-auto">{children}</main>
+        </div>
       </body>
     </html>
   );

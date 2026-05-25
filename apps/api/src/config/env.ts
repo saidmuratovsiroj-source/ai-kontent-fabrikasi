@@ -19,6 +19,7 @@ export const env = {
   anthropicApiKey:   optional("ANTHROPIC_API_KEY", ""),
   openrouterApiKey:  optional("OPENROUTER_API_KEY", ""),
   tavilyApiKey:      optional("TAVILY_API_KEY", ""),
+  youtubeApiKey:     optional("YOUTUBE_API_KEY", ""),
   telegramBotToken:  optional("TELEGRAM_BOT_TOKEN", ""),
   telegramChatId:    optional("TELEGRAM_CHAT_ID", ""),
   nodeEnv:           optional("NODE_ENV", "development"),

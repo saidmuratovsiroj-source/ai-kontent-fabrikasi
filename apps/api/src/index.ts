@@ -12,6 +12,8 @@ import runsRouter from "./routes/runs";
 import testsRouter from "./routes/tests";
 import tasksRouter from "./routes/tasks";
 import contentPlanRouter from "./routes/contentPlan";
+import channelsRouter from "./routes/channels";
+import maqsadRouter from "./routes/maqsad";
 
 const app = express();
 
@@ -28,6 +30,8 @@ app.use("/api", runsRouter);
 app.use("/api", testsRouter);
 app.use("/api", tasksRouter);
 app.use("/api", contentPlanRouter);
+app.use("/api", channelsRouter);
+app.use("/api", maqsadRouter);
 
 async function start() {
   await connectDb();
