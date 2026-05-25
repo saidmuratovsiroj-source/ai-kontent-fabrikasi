@@ -1,5 +1,6 @@
 import HealthCheck from "@/components/HealthCheck";
 import BudgetBar from "@/components/BudgetBar";
+import TestPanel from "@/components/TestPanel";
 
 export default function DashboardPage() {
   return (
@@ -22,6 +23,8 @@ export default function DashboardPage() {
         </h2>
         <BudgetBar />
       </section>
+
+      <TestPanel />
 
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[

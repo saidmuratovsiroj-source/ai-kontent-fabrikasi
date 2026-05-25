@@ -9,6 +9,7 @@ import pipelineStreamRouter from "./routes/pipelineStream";
 import budgetRouter from "./routes/budget";
 import knowledgeRouter from "./routes/knowledge";
 import runsRouter from "./routes/runs";
+import testsRouter from "./routes/tests";
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use("/api", pipelineStreamRouter);
 app.use("/api", budgetRouter);
 app.use("/api", knowledgeRouter);
 app.use("/api", runsRouter);
+app.use("/api", testsRouter);
 
 async function start() {
   await connectDb();
