@@ -5,8 +5,11 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { label: "Boshqaruv paneli", href: "/",           icon: "⊞" },
+  { label: "Loyihalar",        href: "/projects",   icon: "📁" },
+  { label: "Ideyalar",         href: "/ideas",      icon: "💡" },
   { label: "Agentlar",         href: "/agents",     icon: "🤖" },
   { label: "Roy yugurishlari", href: "/runs",       icon: "🚀" },
+  { label: "Video papkalari",  href: "/videos",     icon: "🗂️" },
   { label: "Vazifalar",        href: "/tasks",      icon: "📋" },
   { label: "Taqvim",           href: "/takvim",     icon: "📅" },
   { label: "Bilim bazasi",     href: "/knowledge",  icon: "📚" },

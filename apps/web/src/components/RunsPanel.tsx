@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useProject } from "@/contexts/ProjectContext";
 
 type StepStatus = "waiting" | "running" | "done" | "approved" | "rejected" | "error" | "cancelled";
 
@@ -103,6 +104,7 @@ function BudgetBar({ spent, limit }: { spent: number; limit: number }) {
 }
 
 export default function RunsPanel({ initialTopic }: { initialTopic?: string }) {
+  const { activeProject } = useProject();
   const [input,          setInput]          = useState(initialTopic ?? "");
   const [budgetEnabled,  setBudgetEnabled]  = useState(false);
   const [budgetLimit,    setBudgetLimit]    = useState(1.00);
@@ -164,6 +166,7 @@ export default function RunsPanel({ initialTopic }: { initialTopic?: string }) {
     try {
       const body: Record<string, unknown> = { userRequest: input.trim() };
       if (budgetEnabled) body.budgetLimit = budgetLimit;
+      if (activeProject) body.projectId = activeProject.id;
 
       const res = await fetch("/api/pipeline/stream", {
         method:  "POST",

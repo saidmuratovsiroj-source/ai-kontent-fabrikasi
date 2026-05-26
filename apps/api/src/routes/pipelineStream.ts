@@ -19,6 +19,7 @@ const MAX_RETRIES = 2;
 const BodySchema = z.object({
   userRequest: z.string().min(3).max(500),
   budgetLimit: z.number().min(0.10).max(5.00).optional(),
+  projectId:   z.string().uuid().optional(),
 });
 
 function send(res: Response, event: string, data: object) {
@@ -58,7 +59,7 @@ router.post("/pipeline/stream", async (req: Request, res: Response) => {
   res.setHeader("Connection",    "keep-alive");
   res.flushHeaders();
 
-  const { userRequest, budgetLimit } = parsed.data;
+  const { userRequest, budgetLimit, projectId } = parsed.data;
   let activeBudget: number | undefined = budgetLimit;
 
   // Byudjet chegasiga yetildi → foydalanuvchidan ruxsat so'raydi
@@ -243,16 +244,32 @@ router.post("/pipeline/stream", async (req: Request, res: Response) => {
     // ── DB GA SAQLASH ─────────────────────────────────────────────────────
     const costUsd = Math.round(totalCostUsd * 10000) / 10000;
     try {
-      await prisma.run.create({
+      const savedRun = await prisma.run.create({
         data: {
           title:       topic.slice(0, 200),
           status:      script || thumbnail ? "COMPLETED" : "FAILED",
           input:       userRequest,
           budgetLimit: budgetLimit ?? null,
           budgetSpent: costUsd,
+          projectId:   projectId ?? null,
           output: JSON.stringify({ plan, topic, report: finalReport, script, thumbnail, costUsd, approved }),
         },
       });
+
+      if (script || thumbnail) {
+        await prisma.videoFolder.create({
+          data: {
+            title:     topic.slice(0, 200),
+            topic,
+            script:    script    || null,
+            report:    finalReport || null,
+            thumbnail: thumbnail || null,
+            plan:      plan      || null,
+            runId:     savedRun.id,
+            projectId: projectId ?? null,
+          },
+        });
+      }
     } catch (dbErr) {
       console.error("[DB] Run saqlanmadi:", dbErr instanceof Error ? dbErr.message : dbErr);
     }

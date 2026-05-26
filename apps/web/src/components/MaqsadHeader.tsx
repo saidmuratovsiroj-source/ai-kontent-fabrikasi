@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import ProjectBar from "./ProjectBar";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -22,13 +23,8 @@ export default function MaqsadHeader() {
   const yukla = useCallback(async () => {
     try {
       const r = await fetch(`${API}/api/maqsad`);
-      if (r.ok) {
-        const data = await r.json() as MaqsadMalumot | null;
-        setMaqsad(data);
-      }
-    } catch {
-      // Backend ishlamasa jim turadi
-    }
+      if (r.ok) setMaqsad(await r.json() as MaqsadMalumot | null);
+    } catch { /* Backend ishlamasa jim turadi */ }
   }, []);
 
   useEffect(() => {
@@ -37,7 +33,13 @@ export default function MaqsadHeader() {
     return () => clearInterval(id);
   }, [yukla]);
 
-  if (!maqsad) return null;
+  if (!maqsad) {
+    return (
+      <div className="bg-gray-900 border-b border-gray-800 text-white text-xs px-4 py-1.5 flex items-center justify-end">
+        <ProjectBar />
+      </div>
+    );
+  }
 
   const joriy       = maqsad.mainChannel?.subscribers ?? 0;
   const maqsadSon   = maqsad.targetSubscribers;
@@ -47,25 +49,28 @@ export default function MaqsadHeader() {
   const kunlikKerak = qolganKun > 0 ? Math.ceil((maqsadSon - joriy) / qolganKun) : 0;
 
   return (
-    <div className="bg-indigo-700 text-white text-xs px-4 py-1.5 flex items-center gap-3 justify-center select-none">
-      <span>⭐</span>
-      <span className="font-semibold">
-        {formatRaqam(joriy)} / {formatRaqam(maqsadSon)}
-      </span>
-      <span className="text-indigo-200">|</span>
-      <span>{foiz.toFixed(1)}%</span>
-      <div className="w-24 h-1.5 bg-indigo-500 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-white rounded-full transition-all"
-          style={{ width: `${foiz}%` }}
-        />
+    <div className="bg-indigo-700 text-white text-xs px-4 py-1.5 flex items-center gap-3 justify-between select-none">
+      <div className="flex items-center gap-3">
+        <span>⭐</span>
+        <span className="font-semibold">
+          {formatRaqam(joriy)} / {formatRaqam(maqsadSon)}
+        </span>
+        <span className="text-indigo-200">|</span>
+        <span>{foiz.toFixed(1)}%</span>
+        <div className="w-24 h-1.5 bg-indigo-500 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-white rounded-full transition-all"
+            style={{ width: `${foiz}%` }}
+          />
+        </div>
+        <span className="text-indigo-200">|</span>
+        <span>
+          {kunlikKerak > 0 ? `${formatRaqam(kunlikKerak)}/kun kerak` : "Maqsadga yetildi 🎉"}
+        </span>
+        <span className="text-indigo-200">|</span>
+        <span>{qolganKun} kun qoldi</span>
       </div>
-      <span className="text-indigo-200">|</span>
-      <span>
-        {kunlikKerak > 0 ? `${formatRaqam(kunlikKerak)}/kun kerak` : "Maqsadga yetildi 🎉"}
-      </span>
-      <span className="text-indigo-200">|</span>
-      <span>{qolganKun} kun qoldi</span>
+      <ProjectBar />
     </div>
   );
 }

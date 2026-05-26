@@ -70,7 +70,72 @@ enum MessageRole {
   SYSTEM
 }
 
+enum IdeaPriority {
+  YUQORI
+  ORTA
+  PAST
+}
+
+enum IdeaStatus {
+  YANGI
+  REJALASHTIRILDI
+  AMALGA_OSHIRILDI
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  emoji       String   @default("📁")
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  runs         Run[]
+  channels     Channel[]
+  knowledgeItems KnowledgeItem[]
+  ideas        Idea[]
+  videoFolders VideoFolder[]
+
+  @@map("projects")
+}
+
+model Idea {
+  id          String       @id @default(uuid())
+  title       String
+  description String?      @db.Text
+  platform    Platform     @default(YOUTUBE)
+  priority    IdeaPriority @default(ORTA)
+  status      IdeaStatus   @default(YANGI)
+  projectId   String?      @map("project_id")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  project     Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@map("ideas")
+}
+
+model VideoFolder {
+  id        String   @id @default(uuid())
+  title     String
+  topic     String
+  script    String?  @db.Text
+  report    String?  @db.Text
+  thumbnail String?  @db.Text
+  plan      String?  @db.Text
+  projectId String?  @map("project_id")
+  runId     String?  @unique @map("run_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  run       Run?     @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@map("video_folders")
+}
 
 model Agent {
   id           String    @id @default(uuid())
@@ -96,12 +161,15 @@ model Run {
   output       String?   @db.Text
   budgetLimit  Float?    @map("budget_limit")
   budgetSpent  Float     @default(0) @map("budget_spent")
+  projectId    String?   @map("project_id")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   tasks        Task[]
   messages     ChatMessage[]
   contentPlans ContentPlan[]
+  videoFolder  VideoFolder?
+  project      Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   @@map("runs")
 }
@@ -148,7 +216,10 @@ model KnowledgeItem {
   visibleTo String[]      @default([]) @map("visible_to")
   chunks    Int           @default(0)
   sizeKb    Float         @map("size_kb")
+  projectId String?       @map("project_id")
   createdAt DateTime      @default(now()) @map("created_at")
+
+  project   Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   @@map("knowledge_items")
 }
@@ -175,11 +246,13 @@ model Channel {
   views       Float     @default(0)
   videosCount Int       @default(0) @map("videos_count")
   lastSync    DateTime? @map("last_sync")
+  projectId   String?   @map("project_id")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   maqsad      Maqsad[]
   snapshots   ChannelSnapshot[]
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   @@map("channels")
 }

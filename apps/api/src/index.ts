@@ -17,6 +17,9 @@ import maqsadRouter from "./routes/maqsad";
 import analyticsRouter from "./routes/analytics";
 import trendsRouter from "./routes/trends";
 import viralRouter from "./routes/viral";
+import projectsRouter from "./routes/projects";
+import ideasRouter from "./routes/ideas";
+import videoFoldersRouter from "./routes/videoFolders";
 
 const app = express();
 
@@ -38,6 +41,9 @@ app.use("/api", maqsadRouter);
 app.use("/api", analyticsRouter);
 app.use("/api", trendsRouter);
 app.use("/api", viralRouter);
+app.use("/api", projectsRouter);
+app.use("/api", ideasRouter);
+app.use("/api", videoFoldersRouter);
 
 async function start() {
   await connectDb();
