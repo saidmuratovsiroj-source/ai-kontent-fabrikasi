@@ -15,7 +15,7 @@ export type ResearchResult = {
 
 export async function runResearchAgent(topic: string): Promise<ResearchResult> {
   const agent = await prisma.agent.findUnique({ where: { id: RESEARCHER_ID } });
-  if (!agent) throw new Error("Исследователь агенти базада topilmadi. Seed ni qayta ishga tushiring.");
+  if (!agent) throw new Error("Tadqiqotchi agenti bazada topilmadi. Seed ni qayta ishga tushiring.");
 
   const openai = createOpenRouterClient();
 
@@ -23,7 +23,7 @@ export async function runResearchAgent(topic: string): Promise<ResearchResult> {
     { role: "system", content: agent.systemPrompt },
     {
       role:    "user",
-      content: `Проведи глубокое исследование по теме: "${topic}"\n\nИспользуй инструмент web_search для поиска актуальных данных. Сделай 2-3 разных поисковых запроса чтобы охватить тему со всех сторон. Затем напиши структурированный отчёт.`,
+      content: `Mavzu bo'yicha chuqur tadqiqot o'tkazing: "${topic}"\n\nAktual ma'lumotlarni topish uchun web_search vositasidan foydalaning. Mavzuni har tomonlama qoplash uchun 2-4 ta turli qidiruv so'rovi yuboring. So'ng tizim promptidagi formatda tuzilgan hisobot yozing.`,
     },
   ];
 
@@ -42,7 +42,7 @@ export async function runResearchAgent(topic: string): Promise<ResearchResult> {
       messages:   isLastRound
         ? [...messages, {
             role:    "user" as const,
-            content: "Достаточно данных собрано. Напиши финальный структурированный отчёт на основе всей найденной информации. Используй предписанный формат отчёта из системного промпта.",
+            content: "Yetarli ma'lumot to'plandi. Tizim promptidagi formatda — to'plangan barcha ma'lumotlar asosida yakuniy tuzilgan hisobot yozing.",
           }]
         : messages,
       tools: isLastRound ? undefined : [webSearchToolOAI],
