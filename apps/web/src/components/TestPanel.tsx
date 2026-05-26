@@ -37,7 +37,7 @@ type HolatTuri = "tayyor" | "yuklanyapti" | "ishlayapti" | "tugadi" | "xato";
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 export default function TestPanel() {
-  const [ochiq,      setOchiq]      = useState(false);
+  const [ochiq,      setOchiq]      = useState(true);
   const [testlar,    setTestlar]    = useState<TestHolat[]>([]);
   const [tanlangan,  setTanlangan]  = useState<string | null>(null);
   const [holat,      setHolat]      = useState<HolatTuri>("tayyor");
@@ -214,7 +214,7 @@ export default function TestPanel() {
                 className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium
                   hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                ▶ Ishga tushirish
+                🧪 Test ishlatish
               </button>
             </>
           )}

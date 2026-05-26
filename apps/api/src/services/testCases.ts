@@ -85,6 +85,21 @@ function muqovaGoyaSana(thumbnail: string): number {
   return (thumbnail.match(/^##\s/gm) ?? []).length;
 }
 
+function inglizJumlaDetect(matn: string): boolean {
+  const sozlar = ["\\bthe\\b", "\\bthat\\b", "\\bthis\\b", "\\bthey\\b", "\\btheir\\b",
+                  "\\bwhich\\b", "\\bhave\\b", "\\bbeen\\b", "\\bwere\\b", "\\bfrom\\b"];
+  const regex = new RegExp(sozlar.join("|"), "gi");
+  return (matn.match(regex) ?? []).length > 4;
+}
+
+function manbasizStatAniqla(matn: string): { bor: boolean; foizSoni: number } {
+  const foizlar = (matn.match(/\d[\d.,]*\s*%/g) ?? []).length;
+  if (foizlar < 3) return { bor: false, foizSoni: foizlar };
+  const manbaKalimalar = /bo['']yicha|ma['']lumot|tadqiqot|hisobot|manba|manbaga|research|study|survey|ko['']ra|aytiladi/gi;
+  const manbalar       = (matn.match(manbaKalimalar) ?? []).length;
+  return { bor: manbalar < Math.ceil(foizlar / 2), foizSoni: foizlar };
+}
+
 export function tekshir(
   test:      TestHolat,
   script:    string,
@@ -93,6 +108,7 @@ export function tekshir(
   const m = test.mezonlar;
   const mezonlar: MezonNatija[] = [];
 
+  // 1. Ssenariy uzunligi
   const sozSoni = sozSana(script);
   mezonlar.push({
     nom:           "Ssenariy uzunligi",
@@ -101,14 +117,25 @@ export function tekshir(
     talab:         `${m.minSozlar}–${m.maxSozlar} so'z`,
   });
 
+  // 2. Kiril (rus) harfi yo'q
   const kirilYoq = !kirilBormi(script) && !kirilBormi(thumbnail);
   mezonlar.push({
-    nom:           "Faqat o'zbek tili",
+    nom:           "Kiril (rus) harfi yo'q",
     utdi:          kirilYoq,
-    haqiqiyQiymat: kirilYoq ? "Kiril harfi topilmadi ✓" : "⚠️ Kiril harflari topildi",
+    haqiqiyQiymat: kirilYoq ? "Topilmadi ✓" : "⚠️ Kiril harflari topildi",
     talab:         "Faqat lotin alifbosi",
   });
 
+  // 3. Ingliz jumlalari yo'q
+  const inglizBor = inglizJumlaDetect(script) || inglizJumlaDetect(thumbnail);
+  mezonlar.push({
+    nom:           "Ingliz jumlasi yo'q",
+    utdi:          !inglizBor,
+    haqiqiyQiymat: inglizBor ? "⚠️ Ingliz jumla belgilari topildi" : "Topilmadi ✓",
+    talab:         "Faqat o'zbek tili + texnik atamalar",
+  });
+
+  // 4. Sarlavhalar soni
   const sarlavhaSoni = sarlavhaSana(script);
   mezonlar.push({
     nom:           "Sarlavhalar soni",
@@ -117,12 +144,26 @@ export function tekshir(
     talab:         `kamida ${m.minSarlavhalar} ta`,
   });
 
+  // 5. Muqova g'oyalari soni
   const muqovaSoni = muqovaGoyaSana(thumbnail);
   mezonlar.push({
     nom:           "Muqova g'oyalari",
     utdi:          muqovaSoni >= m.minMuqovaGoyalar,
     haqiqiyQiymat: `${muqovaSoni} ta`,
     talab:         `kamida ${m.minMuqovaGoyalar} ta`,
+  });
+
+  // 6. Statistikalar asosli
+  const statNatija = manbasizStatAniqla(script);
+  mezonlar.push({
+    nom:           "Statistikalar asosli",
+    utdi:          !statNatija.bor,
+    haqiqiyQiymat: statNatija.bor
+      ? `⚠️ ${statNatija.foizSoni} ta foiz — manba yetarli emas`
+      : statNatija.foizSoni > 0
+        ? `${statNatija.foizSoni} ta foiz — manbalar bor ✓`
+        : "Foiz statistika topilmadi ✓",
+    talab:         "Har bir % ko'rsatkich manba bilan",
   });
 
   return {
