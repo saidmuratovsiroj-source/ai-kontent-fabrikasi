@@ -96,7 +96,7 @@ router.post("/pipeline/stream", async (req: Request, res: Response) => {
     if (!strateg) throw new Error("Strateg bazada topilmadi");
 
     const openai        = createOpenRouterClient();
-    const STRATEG_MODEL = "anthropic/claude-3.5-sonnet";
+    const STRATEG_MODEL = "anthropic/claude-sonnet-4.5";
 
     const strategRes = await openai.chat.completions.create({
       model:      STRATEG_MODEL,
@@ -189,8 +189,8 @@ router.post("/pipeline/stream", async (req: Request, res: Response) => {
     try {
       const r = await runScenarioAgent(topic, finalReport);
       script = r.script ?? "";
-      void trackUsage("scenario", "anthropic/claude-3.5-sonnet", r.usage.inputTokens, r.usage.outputTokens);
-      totalCostUsd += calcCost("anthropic/claude-3.5-sonnet", r.usage.inputTokens, r.usage.outputTokens);
+      void trackUsage("scenario", "anthropic/claude-sonnet-4.5", r.usage.inputTokens, r.usage.outputTokens);
+      totalCostUsd += calcCost("anthropic/claude-sonnet-4.5", r.usage.inputTokens, r.usage.outputTokens);
       send(res, "step", {
         agent: "Сценарист", status: "done",
         message: `Ssenariy tayyor — ${script.length} belgi`,

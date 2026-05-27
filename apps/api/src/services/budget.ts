@@ -3,7 +3,7 @@ import { prisma } from "../lib/prisma";
 // Token narxlari (USD per 1 token)
 const PRICING: Record<string, { input: number; output: number }> = {
   // OpenRouter modellari
-  "anthropic/claude-3.5-sonnet": { input: 0.000003,   output: 0.000015  },
+  "anthropic/claude-sonnet-4.5": { input: 0.000003,   output: 0.000015  },
   "openai/gpt-4o":               { input: 0.0000025,  output: 0.00001   },
   "openai/gpt-4o-mini":          { input: 0.00000015, output: 0.0000006 },
   // Eski Anthropic modellari (arxiv uchun)
@@ -13,10 +13,10 @@ const PRICING: Record<string, { input: number; output: number }> = {
   "claude-haiku-4-5":            { input: 0.0000008,  output: 0.000004  },
 };
 
-const BUDGET_START = parseFloat(process.env.BUDGET_START_USD ?? "5.00");
+const BUDGET_START = parseFloat(process.env.BUDGET_START_USD ?? "50.00");
 
 export function calcCost(model: string, inputTokens: number, outputTokens: number): number {
-  const price = PRICING[model] ?? PRICING["anthropic/claude-3.5-sonnet"];
+  const price = PRICING[model] ?? PRICING["anthropic/claude-sonnet-4.5"];
   return (inputTokens * price.input + outputTokens * price.output);
 }
 

@@ -3,6 +3,8 @@
 import { useState, useRef } from "react";
 import { useProject } from "@/contexts/ProjectContext";
 
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
 type StepStatus = "waiting" | "running" | "done" | "approved" | "rejected" | "error" | "cancelled";
 
 type LogStep = {
@@ -139,7 +141,7 @@ export default function RunsPanel({ initialTopic }: { initialTopic?: string }) {
   const handleApproval = async (action: "approve" | "edit" | "cancel") => {
     if (!pendingApproval) return;
     setPendingApproval(null);
-    await fetch("/api/pipeline/approve", {
+    await fetch(`${API}/api/pipeline/approve`, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ approvalId: pendingApproval.approvalId, action }),
@@ -168,7 +170,7 @@ export default function RunsPanel({ initialTopic }: { initialTopic?: string }) {
       if (budgetEnabled) body.budgetLimit = budgetLimit;
       if (activeProject) body.projectId = activeProject.id;
 
-      const res = await fetch("/api/pipeline/stream", {
+      const res = await fetch(`${API}/api/pipeline/stream`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify(body),

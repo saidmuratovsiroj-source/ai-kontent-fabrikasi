@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
 type RunRecord = {
   id:        string;
   title:     string;
@@ -149,7 +151,7 @@ export default function ContentPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const r = await fetch("/api/runs");
+      const r = await fetch(`${API}/api/runs`);
       if (r.ok) setRuns(await r.json() as RunRecord[]);
     } catch { /* ignore */ }
     finally { setLoading(false); }
