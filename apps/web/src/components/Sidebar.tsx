@@ -27,12 +27,12 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex flex-col w-64 min-h-screen bg-sidebar text-white shrink-0">
-      <div className="px-6 py-5 border-b border-slate-700">
+    <aside className="flex flex-col w-64 h-full bg-sidebar text-white shrink-0">
+      <div className="px-6 py-5 border-b border-slate-700 shrink-0">
         <span className="text-lg font-bold tracking-tight">AI Kontent Fabrikasi</span>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const active = pathname === item.href;
           return (
@@ -52,7 +52,7 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="px-6 py-4 border-t border-slate-700 text-xs text-slate-500">
+      <div className="px-6 py-4 border-t border-slate-700 text-xs text-slate-500 shrink-0">
         v1.0.0
       </div>
     </aside>

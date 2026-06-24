@@ -90,13 +90,13 @@ router.post("/pipeline/stream", async (req: Request, res: Response) => {
     send(res, "start", { message: "Pipeline boshlandi", userRequest });
 
     // ── 1. STRATEG ────────────────────────────────────────────────────────
-    send(res, "step", { agent: "Стратег", status: "running", message: "Mavzuni tahlil qilmoqda..." });
+    send(res, "step", { agent: "Strateg", status: "running", message: "Mavzuni tahlil qilmoqda..." });
 
     const strateg = await prisma.agent.findUnique({ where: { id: STRATEG_ID } });
     if (!strateg) throw new Error("Strateg bazada topilmadi");
 
     const openai        = createOpenRouterClient();
-    const STRATEG_MODEL = "anthropic/claude-sonnet-4.5";
+    const STRATEG_MODEL = "anthropic/claude-sonnet-4-6";
 
     const strategRes = await openai.chat.completions.create({
       model:      STRATEG_MODEL,
@@ -128,7 +128,7 @@ router.post("/pipeline/stream", async (req: Request, res: Response) => {
     void trackUsage("strateg-plan", STRATEG_MODEL, sIn, sOut);
     totalCostUsd += calcCost(STRATEG_MODEL, sIn, sOut);
 
-    send(res, "step", { agent: "Стратег", status: "done", message: plan, topic });
+    send(res, "step", { agent: "Strateg", status: "done", message: plan, topic });
 
     if (!await budgetTekshir(totalCostUsd)) {
       send(res, "cancelled", { message: "Byudjet — foydalanuvchi to'xtatdi" }); res.end(); return;
@@ -139,7 +139,7 @@ router.post("/pipeline/stream", async (req: Request, res: Response) => {
 
     for (let round = 1; round <= MAX_RETRIES + 1; round++) {
       send(res, "step", {
-        agent: "Исследователь", status: "running", round,
+        agent: "Tadqiqotchi", status: "running", round,
         message: `Internet qidirmoqda... (${round}/${MAX_RETRIES + 1})`,
       });
 
@@ -148,7 +148,7 @@ router.post("/pipeline/stream", async (req: Request, res: Response) => {
       totalCostUsd += calcCost("openai/gpt-4o-mini", researchResult.usage.inputTokens, researchResult.usage.outputTokens);
 
       send(res, "step", {
-        agent:   "Исследователь", status: "done", round,
+        agent:   "Tadqiqotchi", status: "done", round,
         message: `${researchResult.queries.length} ta qidiruv bajarildi`,
         queries: researchResult.queries,
         preview: researchResult.report.slice(0, 400) + "...",
@@ -158,14 +158,14 @@ router.post("/pipeline/stream", async (req: Request, res: Response) => {
         send(res, "cancelled", { message: "Byudjet — foydalanuvchi to'xtatdi" }); res.end(); return;
       }
 
-      send(res, "step", { agent: "Критик", status: "running", round, message: "Hisobotni tekshirmoqda..." });
+      send(res, "step", { agent: "Tanqidchi", status: "running", round, message: "Hisobotni tekshirmoqda..." });
 
       const criticResult = await runCriticAgent(topic, researchResult.report);
       void trackUsage("critic", "openai/gpt-4o-mini", criticResult.usage.inputTokens, criticResult.usage.outputTokens);
       totalCostUsd += calcCost("openai/gpt-4o-mini", criticResult.usage.inputTokens, criticResult.usage.outputTokens);
 
       send(res, "step", {
-        agent:    "Критик",
+        agent:    "Tanqidchi",
         status:   criticResult.approved ? "approved" : "rejected",
         round,    score:    criticResult.score,
         approved: criticResult.approved,
@@ -185,19 +185,19 @@ router.post("/pipeline/stream", async (req: Request, res: Response) => {
     }
 
     // ── 4. SSENARIST ─────────────────────────────────────────────────────
-    send(res, "step", { agent: "Сценарист", status: "running", message: "Video ssenariy yozmoqda..." });
+    send(res, "step", { agent: "Ssenarist", status: "running", message: "Video ssenariy yozmoqda..." });
     try {
       const r = await runScenarioAgent(topic, finalReport);
       script = r.script ?? "";
-      void trackUsage("scenario", "anthropic/claude-sonnet-4.5", r.usage.inputTokens, r.usage.outputTokens);
-      totalCostUsd += calcCost("anthropic/claude-sonnet-4.5", r.usage.inputTokens, r.usage.outputTokens);
+      void trackUsage("scenario", "anthropic/claude-sonnet-4-6", r.usage.inputTokens, r.usage.outputTokens);
+      totalCostUsd += calcCost("anthropic/claude-sonnet-4-6", r.usage.inputTokens, r.usage.outputTokens);
       send(res, "step", {
-        agent: "Сценарист", status: "done",
+        agent: "Ssenarist", status: "done",
         message: `Ssenariy tayyor — ${script.length} belgi`,
         preview: script.slice(0, 500) + (script.length > 500 ? "..." : ""),
       });
     } catch (e) {
-      send(res, "step", { agent: "Сценарист", status: "error", message: `Xato: ${e instanceof Error ? e.message : e}` });
+      send(res, "step", { agent: "Ssenarist", status: "error", message: `Xato: ${e instanceof Error ? e.message : e}` });
     }
 
     if (!await budgetTekshir(totalCostUsd)) {
@@ -205,19 +205,19 @@ router.post("/pipeline/stream", async (req: Request, res: Response) => {
     }
 
     // ── 5. DIZAYNER ───────────────────────────────────────────────────────
-    send(res, "step", { agent: "Дизайнер", status: "running", message: "Thumbnail konsepsiyalarini yaratmoqda..." });
+    send(res, "step", { agent: "Dizayner", status: "running", message: "Thumbnail konsepsiyalarini yaratmoqda..." });
     try {
       const r = await runDesignerAgent(topic, script);
       thumbnail = r.concepts ?? "";
       void trackUsage("designer", "openai/gpt-4o-mini", r.usage.inputTokens, r.usage.outputTokens);
       totalCostUsd += calcCost("openai/gpt-4o-mini", r.usage.inputTokens, r.usage.outputTokens);
       send(res, "step", {
-        agent: "Дизайнер", status: "done",
+        agent: "Dizayner", status: "done",
         message: "3 ta thumbnail konsepsiyasi va 5 ta sarlavha tayyorlandi",
         preview: thumbnail.slice(0, 400) + (thumbnail.length > 400 ? "..." : ""),
       });
     } catch (e) {
-      send(res, "step", { agent: "Дизайнер", status: "error", message: `Xato: ${e instanceof Error ? e.message : e}` });
+      send(res, "step", { agent: "Dizayner", status: "error", message: `Xato: ${e instanceof Error ? e.message : e}` });
     }
 
     // ── 6. INSON TASDIQLASH — Telegram'ga yuborishdan oldin ───────────────

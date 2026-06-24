@@ -3,10 +3,11 @@ import { prisma } from "../lib/prisma";
 // Token narxlari (USD per 1 token)
 const PRICING: Record<string, { input: number; output: number }> = {
   // OpenRouter modellari
+  "anthropic/claude-sonnet-4-6": { input: 0.000003,   output: 0.000015  },
   "anthropic/claude-sonnet-4.5": { input: 0.000003,   output: 0.000015  },
   "openai/gpt-4o":               { input: 0.0000025,  output: 0.00001   },
   "openai/gpt-4o-mini":          { input: 0.00000015, output: 0.0000006 },
-  // Eski Anthropic modellari (arxiv uchun)
+  // To'g'ridan-to'g'ri Anthropic modellari (arxiv uchun)
   "claude-opus-4-7":             { input: 0.000015,   output: 0.000075  },
   "claude-opus-4-6":             { input: 0.000015,   output: 0.000075  },
   "claude-sonnet-4-6":           { input: 0.000003,   output: 0.000015  },

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { createOpenRouterClient } from "../lib/openrouter";
+import { trackUsage } from "../services/budget";
 
 const router = Router();
 
@@ -53,7 +54,7 @@ interface ChatXabar {
   content: string;
 }
 
-// POST /api/jarvis/chat
+// POST /api/jarvis/chat — SSE oqimi bilan javob
 router.post("/jarvis/chat", async (req: Request, res: Response) => {
   const { xabar, tarix } = req.body as { xabar: string; tarix: ChatXabar[] };
   if (!xabar?.trim()) {
@@ -64,15 +65,38 @@ router.post("/jarvis/chat", async (req: Request, res: Response) => {
   const openai = createOpenRouterClient();
   const xabarlar: ChatXabar[] = [...(tarix ?? []), { role: "user", content: xabar }];
 
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
   try {
-    const natija = await openai.chat.completions.create({
+    const oqim = await openai.chat.completions.create({
       model:      JARVIS_MODEL,
       max_tokens: 1000,
+      stream:     true,
       messages:   [{ role: "system", content: TIZIM_PROMPTI }, ...xabarlar],
     });
-    res.json({ javob: natija.choices[0].message.content ?? "" });
+
+    let jami_kiruv = 0, jami_chiqish = 0;
+
+    for await (const borak of oqim) {
+      const matn = borak.choices[0]?.delta?.content ?? "";
+      if (matn) {
+        res.write(`data: ${JSON.stringify({ matn })}\n\n`);
+      }
+      if (borak.usage) {
+        jami_kiruv   = borak.usage.prompt_tokens     ?? 0;
+        jami_chiqish = borak.usage.completion_tokens ?? 0;
+      }
+    }
+
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    void trackUsage("jarvis-chat", JARVIS_MODEL, jami_kiruv, jami_chiqish);
   } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : "AI xatosi" });
+    res.write(`data: ${JSON.stringify({ error: err instanceof Error ? err.message : "AI xatosi" })}\n\n`);
+  } finally {
+    res.end();
   }
 });
 
@@ -94,6 +118,9 @@ router.post("/jarvis/post", async (req: Request, res: Response) => {
         { role: "user",   content: `Mavzu: ${mavzu}` },
       ],
     });
+    const kiruv   = natija.usage?.prompt_tokens     ?? 0;
+    const chiqish = natija.usage?.completion_tokens ?? 0;
+    void trackUsage("jarvis-post", JARVIS_MODEL, kiruv, chiqish);
     res.json({ post: natija.choices[0].message.content ?? "" });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "AI xatosi" });
@@ -118,6 +145,9 @@ router.post("/jarvis/goyalar", async (req: Request, res: Response) => {
         { role: "user",   content: `Mavzu/nisha: ${mavzu}` },
       ],
     });
+    const kiruv   = natija.usage?.prompt_tokens     ?? 0;
+    const chiqish = natija.usage?.completion_tokens ?? 0;
+    void trackUsage("jarvis-goyalar", JARVIS_MODEL, kiruv, chiqish);
     res.json({ goyalar: natija.choices[0].message.content ?? "" });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "AI xatosi" });
