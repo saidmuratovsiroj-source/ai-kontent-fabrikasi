@@ -22,6 +22,7 @@ import projectsRouter from "./routes/projects";
 import ideasRouter from "./routes/ideas";
 import videoFoldersRouter from "./routes/videoFolders";
 import vebinarRouter from "./routes/vebinar";
+import jarvisRouter from "./routes/jarvis";
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use("/api", projectsRouter);
 app.use("/api", ideasRouter);
 app.use("/api", videoFoldersRouter);
 app.use("/api", vebinarRouter);
+app.use("/api", jarvisRouter);
 
 async function start() {
   await connectDb();

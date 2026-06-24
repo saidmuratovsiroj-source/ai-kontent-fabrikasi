@@ -12,6 +12,7 @@ const navItems = [
   { label: "Video papkalari",  href: "/videos",     icon: "🗂️" },
   { label: "Vazifalar",        href: "/tasks",      icon: "📋" },
   { label: "Taqvim",           href: "/takvim",     icon: "📅" },
+  { label: "Jarvis",             href: "/jarvis",   icon: "🤖" },
   { label: "Vebinar Ustaxonasi", href: "/vebinar",  icon: "🎯" },
   { label: "Bilim bazasi",     href: "/knowledge",  icon: "📚" },
   { label: "Kanallar",         href: "/channels",   icon: "📡" },
