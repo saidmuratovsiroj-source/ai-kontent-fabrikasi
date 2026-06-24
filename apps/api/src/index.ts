@@ -21,6 +21,7 @@ import agentsRouter from "./routes/agents";
 import projectsRouter from "./routes/projects";
 import ideasRouter from "./routes/ideas";
 import videoFoldersRouter from "./routes/videoFolders";
+import vebinarRouter from "./routes/vebinar";
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use("/api", agentsRouter);
 app.use("/api", projectsRouter);
 app.use("/api", ideasRouter);
 app.use("/api", videoFoldersRouter);
+app.use("/api", vebinarRouter);
 
 async function start() {
   await connectDb();
